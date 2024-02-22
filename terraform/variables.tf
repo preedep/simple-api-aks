@@ -1,6 +1,6 @@
 variable "resource_group_location" {
   type        = string
-  default     = "eastus"
+  default     = "southeastasia"
   description = "Location of the resource group."
 }
 
@@ -13,7 +13,7 @@ variable "resource_group_name_prefix" {
 variable "node_count" {
   type        = number
   description = "The initial quantity of nodes for the node pool."
-  default     = 3
+  default     = 1
 }
 
 variable "msi_id" {
