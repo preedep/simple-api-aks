@@ -99,7 +99,7 @@ spec:
     spec:
       containers:
         - name: simple-api
-          image: nickmsft/simple-api:latest
+          image: nickmsft/simple-api-aks:latest
           ports:
             - containerPort: 8888
           resources:

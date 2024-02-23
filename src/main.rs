@@ -1,8 +1,9 @@
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpResponse, HttpServer, Responder, middleware};
 use log::info;
 use pretty_env_logger;
 use rand::Rng;
 use std::iter;
+use actix_web::middleware::Logger;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct Payload {
@@ -42,13 +43,32 @@ async fn manual_hello() -> impl Responder {
     };
     HttpResponse::Ok().json(payload)
 }
-
+async fn health_check() -> impl Responder {
+    HttpResponse::Ok()
+}
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     pretty_env_logger::init();
     info!("Starting server");
-    HttpServer::new(|| App::new().route("/hey", web::get().to(manual_hello)))
+
+    if let Ok(connection_string) = std::env::var("APPLICATIONINSIGHTS_CONNECTION_STRING"){
+        let _tracer = opentelemetry_application_insights::new_pipeline_from_connection_string(connection_string)
+            .expect("valid connection string")
+            .with_client(reqwest::Client::new())
+            .install_batch(opentelemetry_sdk::runtime::Tokio);
+    }
+
+    HttpServer::new(||
+        App::new()
+            .wrap(Logger::default())
+            .wrap(middleware::DefaultHeaders::new().add(("X-Version", "0.1")))
+            .route("/hey", web::get().to(manual_hello))
+            .route("/health", web::get().to(health_check))
+        )
         .bind(("0.0.0.0", 8888))?
         .run()
         .await
+
+   // global::shutdown_tracer_provider();
+
 }
