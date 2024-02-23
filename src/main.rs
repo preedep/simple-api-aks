@@ -4,6 +4,7 @@ use pretty_env_logger;
 use rand::Rng;
 use std::iter;
 use actix_web::middleware::Logger;
+use opentelemetry_sdk::trace::Tracer;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct Payload {
@@ -55,6 +56,7 @@ async fn main() -> std::io::Result<()> {
         let _tracer = opentelemetry_application_insights::new_pipeline_from_connection_string(connection_string)
             .expect("valid connection string")
             .with_client(reqwest::Client::new())
+            .with_live_metrics(true)
             .install_batch(opentelemetry_sdk::runtime::Tokio);
     }
 

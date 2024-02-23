@@ -17,3 +17,4 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 reqwest = { version = "0.11" , features = ["rustls-tls"] }
 opentelemetry_sdk = { version = "0.21" , features = ["trace","logs","metrics","rt-tokio"] }
+opentelemetry = { version = "0.21" , features = ["trace","logs","metrics"] }
