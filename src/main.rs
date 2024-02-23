@@ -4,7 +4,11 @@ use pretty_env_logger;
 use rand::Rng;
 use std::iter;
 use actix_web::middleware::Logger;
+use actix_web_opentelemetry::RequestTracing;
+use opentelemetry::global;
 use opentelemetry_sdk::trace::Tracer;
+use tracing_actix_web::TracingLogger;
+use tracing_attributes::instrument;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct Payload {
@@ -24,7 +28,7 @@ fn generate(len: usize) -> String {
     let one_char = || CHARSET[rng.gen_range(0..CHARSET.len())] as char;
     iter::repeat_with(one_char).take(len).collect()
 }
-
+#[instrument]
 async fn manual_hello() -> impl Responder {
     let mut payload_list: Vec<Payload> = Vec::new();
     let mut rng = rand::thread_rng();
@@ -44,6 +48,7 @@ async fn manual_hello() -> impl Responder {
     };
     HttpResponse::Ok().json(payload)
 }
+#[instrument]
 async fn health_check() -> impl Responder {
     HttpResponse::Ok()
 }
@@ -60,17 +65,25 @@ async fn main() -> std::io::Result<()> {
             .install_batch(opentelemetry_sdk::runtime::Tokio);
     }
 
-    HttpServer::new(||
+    let rs = HttpServer::new(||
         App::new()
             .wrap(Logger::default())
+            .wrap(Logger::new(
+                r#"%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i" %T"#,
+            ))
             .wrap(middleware::DefaultHeaders::new().add(("X-Version", "0.1")))
+            .wrap(RequestTracing::new())
+            .wrap(TracingLogger::default())
             .route("/hey", web::get().to(manual_hello))
             .route("/health", web::get().to(health_check))
         )
         .bind(("0.0.0.0", 8888))?
         .run()
-        .await
+        .await;
 
-   // global::shutdown_tracer_provider();
+    global::shutdown_tracer_provider();
+    global::shutdown_logger_provider();
+    global::shutdown_meter_provider();
 
+    rs
 }
