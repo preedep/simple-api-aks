@@ -10,15 +10,9 @@ if [ $status -ne 0 ]; then
     exit 1
 fi
 echo "Building docker image..."
-docker rm -f extract_link:latest
-docker build --platform=linux/amd64 -t extract_link:latest .
+docker rm -f simple-api-aks:latest
+docker build --platform=linux/amd64 -t simple-api-aks:latest .
 
 echo "Pushing to docker hub..."
-docker tag extract_link:latest nickmsft/extract_link:latest
-docker push nickmsft/extract_link:latest
-
-
-
-
-
-
+docker tag simple-api-aks:latest nickmsft/simple-api-aks:latest
+docker push nickmsft/simple-api-aks:latest
