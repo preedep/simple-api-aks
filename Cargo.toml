@@ -25,3 +25,4 @@ tracing-futures = "0.2"
 tracing-opentelemetry = "0.22"
 tracing-subscriber = {version = "0.3"}
 tracing-actix-web = "0.7"
+openssl = { version = "0.10", features = ["vendored"] }
