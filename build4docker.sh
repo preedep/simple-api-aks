@@ -12,6 +12,7 @@ fi
 echo "Building docker image..."
 docker rm -f simple-api-aks:latest
 docker build --platform=linux/amd64 -t simple-api-aks:latest .
+#docker build -t simple-api-aks:latest .
 
 echo "Pushing to docker hub..."
 docker tag simple-api-aks:latest nickmsft/simple-api-aks:latest

@@ -1,12 +1,12 @@
-use actix_web::{web, App, HttpResponse, HttpServer, Responder, middleware};
-use log::info;
+use actix_web::middleware::Logger;
+use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
+use actix_web_opentelemetry::RequestTracing;
+use log::{debug, info};
+use opentelemetry::global;
 use pretty_env_logger;
 use rand::Rng;
 use std::iter;
-use actix_web::middleware::Logger;
-use actix_web_opentelemetry::RequestTracing;
-use opentelemetry::global;
-use opentelemetry_sdk::trace::Tracer;
+use tracing::trace;
 use tracing_actix_web::TracingLogger;
 use tracing_attributes::instrument;
 
@@ -30,6 +30,7 @@ fn generate(len: usize) -> String {
 }
 #[instrument]
 async fn manual_hello() -> impl Responder {
+    trace!("calling manual_hello");
     let mut payload_list: Vec<Payload> = Vec::new();
     let mut rng = rand::thread_rng();
     let num: u32 = rng.gen_range(1..10000);
@@ -57,15 +58,23 @@ async fn main() -> std::io::Result<()> {
     pretty_env_logger::init();
     info!("Starting server");
 
-    if let Ok(connection_string) = std::env::var("APPLICATIONINSIGHTS_CONNECTION_STRING"){
-        let _tracer = opentelemetry_application_insights::new_pipeline_from_connection_string(connection_string)
-            .expect("valid connection string")
-            .with_client(reqwest::Client::new())
-            .with_live_metrics(true)
-            .install_batch(opentelemetry_sdk::runtime::Tokio);
+    if let Ok(connection_string) = std::env::var("APPLICATIONINSIGHTS_CONNECTION_STRING") {
+        debug!(
+            "Starting application insights with connection string: {}",
+            connection_string
+        );
+
+        let _tracer = opentelemetry_application_insights::new_pipeline_from_connection_string(
+            connection_string,
+        )
+        .expect("valid connection string")
+        .with_client(reqwest::Client::new())
+        .with_live_metrics(true)
+        .with_service_name("Simple API")
+        .install_batch(opentelemetry_sdk::runtime::Tokio);
     }
 
-    let rs = HttpServer::new(||
+    let rs = HttpServer::new(|| {
         App::new()
             .wrap(Logger::default())
             .wrap(Logger::new(
@@ -76,10 +85,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(TracingLogger::default())
             .route("/hey", web::get().to(manual_hello))
             .route("/health", web::get().to(health_check))
-        )
-        .bind(("0.0.0.0", 8888))?
-        .run()
-        .await;
+    })
+    .bind(("0.0.0.0", 8888))?
+    .run()
+    .await;
 
     global::shutdown_tracer_provider();
     global::shutdown_logger_provider();
